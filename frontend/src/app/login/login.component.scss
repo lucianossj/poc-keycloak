@@ -1,0 +1,372 @@
+// Variables
+$primary-color: #6366f1;
+$primary-dark: #4f46e5;
+$secondary-color: #f1f5f9;
+$text-color: #1e293b;
+$text-light: #64748b;
+$border-color: #e2e8f0;
+$error-color: #ef4444;
+$success-color: #22c55e;
+$white: #ffffff;
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin transition($property: all, $duration: 0.2s, $timing: ease-in-out) {
+  transition: $property $duration $timing;
+}
+
+// Login Container
+.login-container {
+  min-height: 100vh;
+  @include flex-center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+// Login Card
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: $white;
+  border-radius: 1.5rem;
+  box-shadow: $shadow-xl;
+  padding: 2.5rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Login Header
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  .logo {
+    @include flex-center;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 1rem;
+    margin: 0 auto 1rem;
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      color: $white;
+    }
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: $text-color;
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: $text-light;
+    margin: 0;
+  }
+}
+
+// Social Login Buttons
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.social-btn {
+  @include flex-center;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid $border-color;
+  background: $white;
+  cursor: pointer;
+  @include transition;
+  gap: 0.75rem;
+
+  .social-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $text-color;
+  }
+
+  &:hover {
+    background: $secondary-color;
+    border-color: darken($border-color, 5%);
+    transform: translateY(-1px);
+    box-shadow: $shadow-md;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &.google-btn:hover {
+    border-color: #4285F4;
+  }
+
+  &.instagram-btn:hover {
+    border-color: #E1306C;
+  }
+}
+
+// Divider
+.divider {
+  @include flex-center;
+  margin: 1.5rem 0;
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: $border-color;
+  }
+
+  span {
+    padding: 0 1rem;
+    font-size: 0.85rem;
+    color: $text-light;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+// Login Form
+.login-form {
+  .form-group {
+    margin-bottom: 1.25rem;
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: $text-color;
+      margin-bottom: 0.5rem;
+    }
+
+    .input-wrapper {
+      position: relative;
+
+      .input-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: $text-light;
+        @include transition(color);
+      }
+
+      input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        border: 1px solid $border-color;
+        border-radius: 0.75rem;
+        font-size: 0.95rem;
+        color: $text-color;
+        background: $white;
+        @include transition;
+        box-sizing: border-box;
+
+        &::placeholder {
+          color: lighten($text-light, 10%);
+        }
+
+        &:focus {
+          outline: none;
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+
+          & + .input-icon,
+          ~ .input-icon {
+            color: $primary-color;
+          }
+        }
+
+        &:hover:not(:focus) {
+          border-color: darken($border-color, 10%);
+        }
+      }
+    }
+  }
+}
+
+// Form Options
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  .checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    padding-left: 1.75rem;
+
+    input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+
+      &:checked ~ .checkmark {
+        background: $primary-color;
+        border-color: $primary-color;
+
+        &::after {
+          display: block;
+        }
+      }
+    }
+
+    .checkmark {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 18px;
+      width: 18px;
+      background: $white;
+      border: 2px solid $border-color;
+      border-radius: 4px;
+      @include transition;
+
+      &::after {
+        content: '';
+        position: absolute;
+        display: none;
+        left: 5px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border: solid $white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+
+    .checkbox-label {
+      font-size: 0.875rem;
+      color: $text-light;
+    }
+
+    &:hover .checkmark {
+      border-color: $primary-color;
+    }
+  }
+
+  .forgot-password {
+    font-size: 0.875rem;
+    color: $primary-color;
+    text-decoration: none;
+    font-weight: 500;
+    @include transition(color);
+
+    &:hover {
+      color: $primary-dark;
+      text-decoration: underline;
+    }
+  }
+}
+
+// Submit Button
+.submit-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: $white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  @include transition;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Register Link
+.register-link {
+  text-align: center;
+  margin-top: 1.5rem;
+
+  p {
+    font-size: 0.875rem;
+    color: $text-light;
+    margin: 0;
+
+    a {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 600;
+      @include transition(color);
+
+      &:hover {
+        color: $primary-dark;
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+
+  .login-header {
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .form-options {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
