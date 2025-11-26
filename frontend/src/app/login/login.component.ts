@@ -15,7 +15,7 @@ export class LoginComponent {
   rememberMe: boolean = false;
 
   onSubmit(): void {
-    console.log('Login submitted:', { email: this.email, rememberMe: this.rememberMe });
+    console.log('Login submitted');
     // TODO: Implement authentication logic with Keycloak
   }
 

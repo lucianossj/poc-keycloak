@@ -7,6 +7,15 @@ Este diretório contém a configuração de infraestrutura para rodar o Keycloak
 - Docker
 - Docker Compose
 
+## Configuração
+
+1. Copie o arquivo `.env.example` para `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edite o arquivo `.env` com suas credenciais seguras.
+
 ## Como usar
 
 ### Iniciar os serviços
@@ -38,21 +47,19 @@ docker-compose up -d
 ### Keycloak
 - URL: http://localhost:8080
 - Admin Console: http://localhost:8080/admin
-- Usuário: `admin`
-- Senha: `admin`
+- Credenciais: Confira o arquivo `.env` ou `docker-compose.yml`
 
 ### PostgreSQL
 - Host: localhost
 - Porta: 5432
-- Database: `keycloak`
-- Usuário: `keycloak`
-- Senha: `keycloak_password`
+- Credenciais: Confira o arquivo `.env` ou `docker-compose.yml`
 
 ## Estrutura
 
 ```
 arch/
 ├── docker-compose.yml    # Configuração dos containers
+├── .env.example          # Exemplo de variáveis de ambiente
 ├── README.md             # Esta documentação
 └── scripts/
     ├── init-db.sql       # Script de inicialização do banco
