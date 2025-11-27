@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from './service/login.service';
 
 @Component({
   selector: 'app-login',
@@ -14,6 +15,8 @@ export class LoginComponent {
   password: string = '';
   rememberMe: boolean = false;
 
+  constructor(private authService: AuthService) { }
+
   onSubmit(): void {
     console.log('Login submitted');
     // TODO: Implement authentication logic with Keycloak
@@ -21,7 +24,7 @@ export class LoginComponent {
 
   loginWithGoogle(): void {
     console.log('Login with Google clicked');
-    // TODO: Implement Google OAuth integration via Keycloak
+    this.authService.loginWithGoogle();
   }
 
   loginWithInstagram(): void {
