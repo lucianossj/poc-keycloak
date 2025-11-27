@@ -1,6 +1,7 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, catchError, map, Observable, switchMap } from 'rxjs';
 
 export interface User {
     sub: string;
@@ -16,70 +17,56 @@ export interface User {
 })
 export class AuthService {
     private keycloakUrl = 'http://localhost:8080';
+    private backendUrl = 'http://localhost:8081';
     private realm = 'poc-ecommerce';
-    private clientId = 'poc-ecommerce-app';
-    private redirectUri = 'http://localhost:4200/auth/callback';
 
-    private currentUserSubject = new BehaviorSubject<User | null>(null);
-    public currentUser$ = this.currentUserSubject.asObservable();
-
-    constructor(private router: Router) {
+    constructor(
+        private router: Router,
+        private http: HttpClient
+    ) {
         // Verificar se já tem token válido
         this.checkExistingToken();
     }
 
-    /**
-     * Fazer login direto com Google via Keycloak
-     */
-    loginWithGoogle(): void {
-        const authUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/auth?` +
-            `client_id=${this.clientId}&` +
-            `redirect_uri=${encodeURIComponent(this.redirectUri)}&` +
-            `response_type=code&` +
-            `scope=openid%20profile%20email&` +
-            `kc_idp_hint=google`;  // 🎯 Força login direto com Google
-
-        // Redirecionar para Keycloak
-        window.location.href = authUrl;
+    public login(username:string, password: string, grantType: string): void {
+        const request = this.buildGoogleLoginRequest(username, password, grantType);
+        this.http.post<{ authUrl: string }>(`${this.backendUrl}/auth/login`, request)
+            .subscribe(response => {
+                if (response.authUrl) {
+                    window.location.href = response.authUrl;
+                }
+            });
     }
 
-    // http://localhost:8080/realms/poc-ecommerce/protocol/openid-connect/auth?%20client_id=poc-ecommerce-app&redirect_uri=http%3A%2F%2Flocalhost%3A4200%2Fauth%2Fcallback&response_type=code&scope=openid%20profile%20email&kc_idp_hint=google
-
-    /**
-     * Login normal (mostra tela do Keycloak com opções)
-     */
-    login(): void {
-        const authUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/auth?` +
-            `client_id=${this.clientId}&` +
-            `redirect_uri=${encodeURIComponent(this.redirectUri)}&` +
-            `response_type=code&` +
-            `scope=openid%20profile%20email`;
-
-        window.location.href = authUrl;
+    private buildGoogleLoginRequest(username:string, password: string, grantType: string): any {
+        return {
+            grantType: grantType
+        };
     }
 
-    /**
-     * Processar callback do Keycloak
-     */
     async handleCallback(code: string): Promise<void> {
         try {
-            // Trocar authorization code por tokens
-            const tokenResponse = await this.exchangeCodeForTokens(code);
-            console.log('Token response:', tokenResponse);
+            this.exchangeCodeForTokens(code)
+                .pipe(
+                    map(response => {
+                        console.log('Tokens recebidos:', response);
 
-            // Armazenar tokens
-            localStorage.setItem('access_token', tokenResponse.access_token);
-            localStorage.setItem('refresh_token', tokenResponse.refresh_token);
-            localStorage.setItem('id_token', tokenResponse.id_token);
+                        localStorage.setItem('access_token', response.access_token);
+                        localStorage.setItem('refresh_token', response.refresh_token);
+                        localStorage.setItem('id_token', response.id_token);
 
-            // Buscar informações do usuário
-            const userInfo = await this.getUserInfo(tokenResponse.access_token);
-
-            // Atualizar estado
-            this.currentUserSubject.next(userInfo);
-
-            // Redirecionar para home
-            this.router.navigate(['/home']);
+                        return response;
+                    }),
+                    switchMap(response => this.getUserInfo(response.access_token)),
+                    catchError(error => {
+                        console.error('Erro ao processar callback:', error);
+                        throw error;
+                    })
+                )
+                .subscribe(
+                    response => this.router.navigate(['/home']),
+                    error => console.error('Erro ao obter informações do usuário:', error)
+                );
 
         } catch (error) {
             console.error('Erro no callback:', error);
@@ -87,9 +74,7 @@ export class AuthService {
         }
     }
 
-    /**
-     * Logout
-     */
+    // TODO: Use RxJS and refactors
     logout(): void {
         const idToken = localStorage.getItem('id_token');
         const postLogoutRedirectUri = 'http://localhost:4200/login';
@@ -98,7 +83,6 @@ export class AuthService {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('id_token');
-        this.currentUserSubject.next(null);
         window.location.href = logoutUrl;
     }
 
@@ -127,57 +111,19 @@ export class AuthService {
     }
 
     /**
-     * Obter informações do usuário atual
-     */
-    getCurrentUser(): User | null {
-        return this.currentUserSubject.value;
-    }
-
-    /**
      * Trocar authorization code por tokens
      */
-    private async exchangeCodeForTokens(code: string): Promise<any> {
-        const tokenUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/token`;
-
-        const body = new URLSearchParams({
-            grant_type: 'authorization_code',
-            client_id: this.clientId,
-            code: code,
-            redirect_uri: this.redirectUri
-        });
-
-        const response = await fetch(tokenUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: body.toString()
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to exchange code for tokens');
-        }
-
-        return response.json();
+    private exchangeCodeForTokens(code: string): Observable<any> {
+        return this.http.post<any>(`${this.backendUrl}/auth/token`, { code: code });        
     }
 
-    /**
-     * Buscar informações do usuário
-     */
-    private async getUserInfo(accessToken: string): Promise<User> {
-        const userInfoUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/userinfo`;
-
-        const response = await fetch(userInfoUrl, {
+    private getUserInfo(accessToken: string): Observable<any> {
+        console.log('Buscando informações do usuário com token:', accessToken);
+        return this.http.get<any>(`${this.backendUrl}/auth/user-info`, {
             headers: {
-                'Authorization': `Bearer ${accessToken}`
+                Authorization: `Bearer ${accessToken}`
             }
         });
-
-        if (!response.ok) {
-            throw new Error('Failed to get user info');
-        }
-
-        return response.json();
     }
 
     /**
@@ -187,8 +133,14 @@ export class AuthService {
         if (this.isAuthenticated()) {
             try {
                 const token = this.getToken()!;
-                const userInfo = await this.getUserInfo(token);
-                this.currentUserSubject.next(userInfo);
+                this.getUserInfo(token).subscribe(
+                    user => {
+                    },
+                    error => {
+                        console.error('Erro ao obter informações do usuário:', error);
+                        this.logout();
+                    }
+                );
             } catch (error) {
                 console.error('Token inválido:', error);
                 this.logout();

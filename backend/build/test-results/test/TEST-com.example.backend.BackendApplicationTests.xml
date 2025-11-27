@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.backend.BackendApplicationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-11-27T17:21:03" hostname="luciano-panvel-alienware" time="0.492">
+  <properties/>
+  <testcase name="contextLoads()" classname="com.example.backend.BackendApplicationTests" time="0.492"/>
+  <system-out><![CDATA[14:21:02.475 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+14:21:02.515 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.backend.BackendApplication for test class com.example.backend.BackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.0)
+
+2025-11-27T14:21:02.657-03:00  INFO 146252 --- [poc-keycloak-backend] [    Test worker] c.e.backend.BackendApplicationTests      : Starting BackendApplicationTests using Java 21.0.8 with PID 146252 (started by lucianossj in /home/lucianossj/workspace/lj/poc-keycloak/backend)
+2025-11-27T14:21:02.657-03:00  INFO 146252 --- [poc-keycloak-backend] [    Test worker] c.e.backend.BackendApplicationTests      : No active profile set, falling back to 1 default profile: "default"
+2025-11-27T14:21:03.000-03:00 DEBUG 146252 --- [poc-keycloak-backend] [    Test worker] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
+2025-11-27T14:21:03.087-03:00  INFO 146252 --- [poc-keycloak-backend] [    Test worker] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@4b862408, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@6ddee60f, org.springframework.security.web.context.SecurityContextHolderFilter@2a02e34b, org.springframework.security.web.header.HeaderWriterFilter@377874b4, org.springframework.web.filter.CorsFilter@6e829e50, org.springframework.security.web.authentication.logout.LogoutFilter@1095d23a, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@5b000fe6, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@4751e8b9, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4aa2877c, org.springframework.security.web.access.ExceptionTranslationFilter@53940e2f, org.springframework.security.web.access.intercept.AuthorizationFilter@7d42542]
+2025-11-27T14:21:03.197-03:00  INFO 146252 --- [poc-keycloak-backend] [    Test worker] c.e.backend.BackendApplicationTests      : Started BackendApplicationTests in 0.632 seconds (process running for 1.045)
+]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/lucianossj/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.14.10/90ed94ac044ea8953b224304c762316e91fd6b31/byte-buddy-agent-1.14.10.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

@@ -43,7 +43,7 @@ export class AuthCallbackComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route. queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(params => {
       if (params['code']) {
         // Sucesso - temos um authorization code
         this.authService.handleCallback(params['code']);

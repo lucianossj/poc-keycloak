@@ -11,24 +11,24 @@ import { AuthService } from './service/login.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent {
-  email: string = '';
+  username: string = '';
   password: string = '';
+  grantType: string = '';
   rememberMe: boolean = false;
 
   constructor(private authService: AuthService) { }
 
   onSubmit(): void {
     console.log('Login submitted');
-    // TODO: Implement authentication logic with Keycloak
   }
 
   loginWithGoogle(): void {
-    console.log('Login with Google clicked');
-    this.authService.loginWithGoogle();
+    this.grantType = 'GOOGLE';
+    this.authService.login(this.username, this.password, this.grantType);
   }
 
   loginWithInstagram(): void {
-    console.log('Login with Instagram clicked');
-    // TODO: Implement Instagram OAuth integration via Keycloak
+    this.grantType = 'INSTAGRAM';
+    this.authService.login(this.username, this.password, this.grantType);
   }
 }
