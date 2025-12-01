@@ -1,0 +1,6 @@
+export enum GrantType {
+    PASSWORD = 'PASSWORD',
+    PASSWORDLESS = 'PASSWORDLESS',
+    GOOGLE = 'GOOGLE',
+    INSTAGRAM = 'INSTAGRAM'
+}

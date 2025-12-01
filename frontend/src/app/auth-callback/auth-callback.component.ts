@@ -1,8 +1,9 @@
 
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { AuthService } from '../login/service/login.service';
 import { CommonModule } from '@angular/common';
+import { ToastService } from '../shared/services/toast.service';
 
 @Component({
   selector: 'app-auth-callback',
@@ -39,27 +40,44 @@ export class AuthCallbackComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private authService: AuthService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private toastService: ToastService
+  ) { }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       if (params['code']) {
-        // Sucesso - temos um authorization code
         this.authService.handleCallback(params['code']);
       } else if (params['error']) {
-        // Erro do OAuth
-        this.error = params['error_description'] || 'Erro na autenticação';
-        this.loading = false;
+        this.handleParamsError(params);
       } else {
-        // Sem parâmetros esperados
-        this.error = 'Resposta inválida do servidor de autenticação';
-        this. loading = false;
+        this.handleGeneralError();
       }
     });
   }
 
-  goToLogin(): void {
+  public goToLogin(): void {
     this.router.navigate(['/login']);
   }
+
+  private handleParamsError(params: Params): void {
+    const errorMessage = params['error_description'] || 'Erro na autenticação';
+    this.error = errorMessage;
+    this.loading = false;
+    this.toastService.showError(
+      'Erro na Autenticação',
+      errorMessage
+    );
+  }
+
+  private handleGeneralError(): void {
+    const errorMessage = 'Resposta inválida do servidor de autenticação';
+    this.error = errorMessage;
+    this.loading = false;
+    this.toastService.showError(
+      'Erro na Autenticação',
+      errorMessage
+    );
+  }
+  
 }

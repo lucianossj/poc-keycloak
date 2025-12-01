@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, catchError, map, Observable, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, map, Observable, switchMap, throwError } from 'rxjs';
+import { GrantType } from '../../shared/enums/grant-type.enum';
+import { ToastService } from '../../shared/services/toast.service';
 
 export interface User {
     sub: string;
@@ -16,84 +18,120 @@ export interface User {
     providedIn: 'root'
 })
 export class AuthService {
-    private keycloakUrl = 'http://localhost:8080';
-    private backendUrl = 'http://localhost:8081';
-    private realm = 'poc-ecommerce';
+
+    private readonly backendUrl = 'http://localhost:8081';
 
     constructor(
         private router: Router,
-        private http: HttpClient
+        private http: HttpClient,
+        private toastService: ToastService
     ) {
-        // Verificar se já tem token válido
         this.checkExistingToken();
     }
 
-    public login(username:string, password: string, grantType: string): void {
+    public login(username: string, password: string, grantType: GrantType): void {
         const request = this.buildGoogleLoginRequest(username, password, grantType);
+
         this.http.post<{ authUrl: string }>(`${this.backendUrl}/auth/login`, request)
-            .subscribe(response => {
-                if (response.authUrl) {
-                    window.location.href = response.authUrl;
-                }
-            });
+            .subscribe(
+                response => this.handleLoginSuccess(response),
+                error => this.handleLoginError(error)
+            );
     }
 
-    private buildGoogleLoginRequest(username:string, password: string, grantType: string): any {
+    private handleLoginSuccess(response: any): void {
+        const isSocialLogin = this.grantTypeIsSocialLogin(response.grantType);
+
+        if (isSocialLogin) {
+            this.handleSocialLoginSuccess(response);
+            return;
+        }
+
+        return;
+    }
+
+    private handleLoginError(error: any): void {
+        console.error('Erro ao iniciar login:', error);
+        this.toastService.showError(
+            'Erro no Login',
+            'Não foi possível iniciar o processo de login. Tente novamente.'
+        );
+    }
+
+    private handleSocialLoginSuccess(response: any): void {
+        if (response.authUrl) {
+            window.location.href = response.authUrl;
+        }
+    }
+
+    private buildGoogleLoginRequest(username: string, password: string, grantType: GrantType): any {
         return {
+            username: username,
+            password: password,
             grantType: grantType
         };
     }
 
-    async handleCallback(code: string): Promise<void> {
+    public async handleCallback(code: string): Promise<void> {
         try {
             this.exchangeCodeForTokens(code)
                 .pipe(
-                    map(response => {
-                        console.log('Tokens recebidos:', response);
-
-                        localStorage.setItem('access_token', response.access_token);
-                        localStorage.setItem('refresh_token', response.refresh_token);
-                        localStorage.setItem('id_token', response.id_token);
-
-                        return response;
-                    }),
-                    switchMap(response => this.getUserInfo(response.access_token)),
-                    catchError(error => {
-                        console.error('Erro ao processar callback:', error);
-                        throw error;
-                    })
+                    map(response => this.setTokensOnStorageAndReturn(response)),
+                    switchMap(response => this.getUserInfo(response?.access_token)),
+                    catchError(error => this.handleCallbackError(error, 'Erro na Autenticação', 'Falha ao processar os dados de autenticação.'))
                 )
                 .subscribe(
-                    response => this.router.navigate(['/home']),
-                    error => console.error('Erro ao obter informações do usuário:', error)
+                    () => this.handleCallbackSuccess(),
+                    error => this.handleCallbackError(error, 'Erro no Login', 'Não foi possível obter suas informações. Tente fazer login novamente.')
                 );
-
         } catch (error) {
-            console.error('Erro no callback:', error);
+            this.toastService.showError(
+                'Erro na Autenticação',
+                'Ocorreu um erro inesperado durante o login. Tente novamente.'
+            );
             this.router.navigate(['/login'], { queryParams: { error: 'auth_failed' } });
         }
     }
 
-    // TODO: Use RxJS and refactors
-    logout(): void {
+    public logout(): void {
         const idToken = localStorage.getItem('id_token');
-        const postLogoutRedirectUri = 'http://localhost:4200/login';
-        const logoutUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/logout?id_token_hint=${idToken}&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
-        // Limpar tokens locais
+
+        this.http.post<any>(`${this.backendUrl}/auth/logout`, {
+            id_token: idToken
+        }).subscribe({
+            next: (response) => {
+                if (response.logoutUrl) {
+                    this.handleLogoutSuccess(response.logoutUrl);
+                } else {
+                    this.handleLogoutSuccess(`/login`);
+                }
+            },
+            error: () => {
+                this.toastService.showError(
+                    'Erro no Logout',
+                    'Ocorreu um erro ao realizar logout. Limpando dados locais...'
+                );
+                this.handleLogoutSuccess(`/login`);
+            }
+        });
+    }
+
+    private handleLogoutSuccess(logoutUrl?: string): void {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('id_token');
-        window.location.href = logoutUrl;
+
+        if (logoutUrl) {
+            window.location.href = logoutUrl;
+        } else {
+            this.router.navigate(['/login']);
+        }
     }
 
-    /**
-     * Verificar se está autenticado
-     */
-    isAuthenticated(): boolean {
+    public isAuthenticated(): boolean {
         const token = localStorage.getItem('access_token');
         if (!token) return false;
 
-        // Verificar se token não expirou
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             const now = Math.floor(Date.now() / 1000);
@@ -103,18 +141,19 @@ export class AuthService {
         }
     }
 
-    /**
-     * Obter token para requisições
-     */
-    getToken(): string | null {
+    public getToken(): string | null {
         return localStorage.getItem('access_token');
     }
 
-    /**
-     * Trocar authorization code por tokens
-     */
     private exchangeCodeForTokens(code: string): Observable<any> {
-        return this.http.post<any>(`${this.backendUrl}/auth/token`, { code: code });        
+        return this.http.post<any>(`${this.backendUrl}/auth/token`, { code: code });
+    }
+
+    private setTokensOnStorageAndReturn(response: any): any {
+        localStorage.setItem('access_token', response.access_token);    // Autorizar requisições
+        localStorage.setItem('refresh_token', response.refresh_token);  // Renovar token
+        localStorage.setItem('id_token', response.id_token);            // Identidade do usuário
+        return response;
     }
 
     private getUserInfo(accessToken: string): Observable<any> {
@@ -126,25 +165,38 @@ export class AuthService {
         });
     }
 
-    /**
-     * Verificar token existente na inicialização
-     */
+    private handleCallbackSuccess(): void {
+        this.toastService.showSuccess(
+            'Login Realizado',
+            'Bem-vindo! Login realizado com sucesso.'
+        );
+        this.router.navigate(['/home']);
+    }
+
+    private handleCallbackError(error: any, title: string, message: string): Observable<never> {
+        this.toastService.showError(
+            title,
+            message
+        );
+        return throwError(() => error);
+    }
+
     private async checkExistingToken(): Promise<void> {
         if (this.isAuthenticated()) {
             try {
                 const token = this.getToken()!;
-                this.getUserInfo(token).subscribe(
-                    user => {
-                    },
-                    error => {
-                        console.error('Erro ao obter informações do usuário:', error);
-                        this.logout();
-                    }
-                );
+                this.getUserInfo(token).subscribe();
             } catch (error) {
-                console.error('Token inválido:', error);
+                this.toastService.showWarning(
+                    'Sessão Expirada',
+                    'Sua sessão expirou. Faça login novamente.'
+                );
                 this.logout();
             }
         }
+    }
+
+    private grantTypeIsSocialLogin(grantType: GrantType): boolean {
+        return grantType == GrantType.GOOGLE || grantType == GrantType.INSTAGRAM;
     }
 }

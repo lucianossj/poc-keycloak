@@ -17,3 +17,43 @@ node_modules/
 
 # Maven
 .mvn/repository/
+
+# Gradle
+**/gradle/
+**/build/
+**/.gradle/
+*.gradle.kts
+gradle-wrapper.jar
+gradle-wrapper.properties.lock
+.gradle-enterprise/
+
+# Gradle specific files (from the image)
+backend/gradle/8.5/
+backend/gradle/8.5/**
+backend/build/classes/
+backend/build/tmp/
+backend/build/generated/
+backend/build/libs/
+backend/build/reports/
+backend/build/test-results/
+backend/build/resources/
+backend/build/resolvedMainClassName
+
+# Gradle cache and lock files
+**/checksums.lock
+**/dependencies-accessors.lock
+**/executionHistory.bin
+**/executionHistory.lock
+**/fileHashes.bin
+**/fileHashes.lock
+**/resourceHashesCache.bin
+**/buildOutputCleanup.lock
+**/file-system.probe
+
+# Gradle compiled classes
+**/classes/java/main/
+**/classes/java/test/
+**/*.class
+**/previous-compilation-data.bin
+
+

@@ -2,6 +2,7 @@ package com.example.backend.integration;
 
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
@@ -73,15 +74,22 @@ public class KeycloakIntegration {
     }
 
     public Map<String, Object> logout(String idToken) {
-        String url = KEYCLOAK_URL + "/realms/" + REALM + "/protocol/openid-connect/logout";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        Map<String, String> params = new HashMap<>();
-        params.put("id_token_hint", idToken);
-        String body = buildFormBody(params);
-        HttpEntity<String> request = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-        return response.getBody();
+        try {
+            // Constrói URL de logout com redirecionamento para Single Logout (SLO)
+            String logoutUrl = KEYCLOAK_URL + "/realms/" + REALM + "/protocol/openid-connect/logout?" +
+                "id_token_hint=" + java.net.URLEncoder.encode(idToken, java.nio.charset.StandardCharsets.UTF_8) +
+                "&post_logout_redirect_uri=" + java.net.URLEncoder.encode("http://localhost:4200/login", java.nio.charset.StandardCharsets.UTF_8);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("logoutUrl", logoutUrl);
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            return result;
+        }
     }
 
     public Map<String, Object> getUserInfo(String bearerToken) {
