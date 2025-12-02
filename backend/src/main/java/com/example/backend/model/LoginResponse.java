@@ -1,9 +1,10 @@
 package com.example.backend.model;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class LoginResponse {
-    private GrantType grantType;
     private String authUrl;
 }

@@ -22,11 +22,6 @@ public class KeycloakHttpClient {
         this.keycloakProperties = keycloakProperties;
     }
     
-    public Map<String, Object> loginWithPassword(String username, String password) {
-        Map<String, String> params = buildPasswordGrantParams(username, password);
-        return postForToken(params);
-    }
-    
     public Map<String, Object> exchangeCodeForToken(String code) {
         Map<String, String> params = buildAuthorizationCodeParams(code);
         Map<String, Object> response = postForToken(params);
@@ -46,20 +41,6 @@ public class KeycloakHttpClient {
         );
         
         return response.getBody();
-    }
-    
-    private Map<String, String> buildPasswordGrantParams(String username, String password) {
-        Map<String, String> params = new HashMap<>();
-        params.put("grant_type", "password");
-        params.put("client_id", keycloakProperties.getClientId());
-        params.put("username", username);
-        params.put("password", password);
-        
-        if (keycloakProperties.hasClientSecret()) {
-            params.put("client_secret", keycloakProperties.getClientSecret());
-        }
-        
-        return params;
     }
     
     private Map<String, String> buildAuthorizationCodeParams(String code) {

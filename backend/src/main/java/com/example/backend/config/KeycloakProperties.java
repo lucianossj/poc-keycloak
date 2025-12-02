@@ -13,7 +13,8 @@ public class KeycloakProperties {
     private String clientSecret = "";
     private String redirectUri = "http://localhost:4200/auth/callback";
     private String postLogoutRedirectUri = "http://localhost:4200/login";
-    
+    private String idpHint = "google";
+
     // Getters and Setters
     public String getUrl() {
         return url;
@@ -63,6 +64,14 @@ public class KeycloakProperties {
         this.postLogoutRedirectUri = postLogoutRedirectUri;
     }
     
+    public String getIdpHint() {
+        return idpHint;
+    }
+
+    public void setIdpHint(String idpHint) {
+        this.idpHint = idpHint;
+    }
+
     // Helper methods
     public String getTokenEndpoint() {
         return url + "/realms/" + realm + "/protocol/openid-connect/token";

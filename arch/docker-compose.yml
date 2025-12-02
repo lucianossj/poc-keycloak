@@ -31,7 +31,8 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HOSTNAME_STRICT: false
       KC_HTTP_ENABLED: true
-    command: start-dev
+      KC_PROXY: edge
+    command: start-dev --hostname-strict-https=false --hostname-strict-backchannel=false
     ports:
       - "8080:8080"
     depends_on:

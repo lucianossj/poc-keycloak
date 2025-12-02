@@ -25,14 +25,10 @@ public class KeycloakIntegration {
         this.logoutService = logoutService;
     }
     
-    public String buildGoogleAuthUrl() {
-        return urlService.buildGoogleAuthUrl();
+    public String buildSocialAuthUrl() {
+        return urlService.buildSocialAuthUrl();
     }
-    
-    public Map<String, Object> login(String username, String password) {
-        return httpClient.loginWithPassword(username, password);
-    }
-    
+
     public Map<String, Object> exchangeCodeForToken(String code) {
         return httpClient.exchangeCodeForToken(code);
     }

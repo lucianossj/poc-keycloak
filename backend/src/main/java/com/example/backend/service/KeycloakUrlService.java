@@ -18,14 +18,14 @@ public class KeycloakUrlService {
         this.keycloakProperties = keycloakProperties;
     }
     
-    public String buildGoogleAuthUrl() {
+    public String buildSocialAuthUrl() {
         Map<String, String> params = new HashMap<>();
         params.put("client_id", keycloakProperties.getClientId());
         params.put("redirect_uri", keycloakProperties.getRedirectUri());
         params.put("response_type", "code");
         params.put("scope", "openid profile email");
-        params.put("kc_idp_hint", "google");
-        
+        params.put("kc_idp_hint", keycloakProperties.getIdpHint());
+
         return keycloakProperties.getAuthEndpoint() + "?" + UrlUtils.buildQueryString(params);
     }
     

@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, catchError, map, Observable, switchMap, throwError } from 'rxjs';
-import { GrantType } from '../../shared/enums/grant-type.enum';
 import { ToastService } from '../../shared/services/toast.service';
 
 export interface User {
@@ -29,47 +28,24 @@ export class AuthService {
         this.checkExistingToken();
     }
 
-    public login(username: string, password: string, grantType: GrantType): void {
-        const request = this.buildGoogleLoginRequest(username, password, grantType);
-
-        this.http.post<{ authUrl: string }>(`${this.backendUrl}/auth/login`, request)
-            .subscribe(
-                response => this.handleLoginSuccess(response),
-                error => this.handleLoginError(error)
-            );
+    public getGoogleAuthUrl(): void {
+        this.http.get<{ authUrl: string }>(`${this.backendUrl}/auth/url`)
+            .subscribe({
+                next: response => this.redirectToGoogleAuth(response),
+                error: error => this.handleGetUrlError(error)
+            });
     }
 
-    private handleLoginSuccess(response: any): void {
-        const isSocialLogin = this.grantTypeIsSocialLogin(response.grantType);
-
-        if (isSocialLogin) {
-            this.handleSocialLoginSuccess(response);
-            return;
-        }
-
-        return;
+    private redirectToGoogleAuth(response: any): void {
+        window.location.href = response.authUrl;
     }
 
-    private handleLoginError(error: any): void {
+    private handleGetUrlError(error: any): void {
         console.error('Erro ao iniciar login:', error);
         this.toastService.showError(
             'Erro no Login',
             'Não foi possível iniciar o processo de login. Tente novamente.'
         );
-    }
-
-    private handleSocialLoginSuccess(response: any): void {
-        if (response.authUrl) {
-            window.location.href = response.authUrl;
-        }
-    }
-
-    private buildGoogleLoginRequest(username: string, password: string, grantType: GrantType): any {
-        return {
-            username: username,
-            password: password,
-            grantType: grantType
-        };
     }
 
     public async handleCallback(code: string): Promise<void> {
@@ -80,10 +56,10 @@ export class AuthService {
                     switchMap(response => this.getUserInfo(response?.access_token)),
                     catchError(error => this.handleCallbackError(error, 'Erro na Autenticação', 'Falha ao processar os dados de autenticação.'))
                 )
-                .subscribe(
-                    () => this.handleCallbackSuccess(),
-                    error => this.handleCallbackError(error, 'Erro no Login', 'Não foi possível obter suas informações. Tente fazer login novamente.')
-                );
+                .subscribe({
+                    next: () => this.handleCallbackSuccess(),
+                    error: error => this.handleCallbackError(error, 'Erro no Login', 'Não foi possível obter suas informações. Tente fazer login novamente.')
+                });
         } catch (error) {
             this.toastService.showError(
                 'Erro na Autenticação',
@@ -157,7 +133,6 @@ export class AuthService {
     }
 
     private getUserInfo(accessToken: string): Observable<any> {
-        console.log('Buscando informações do usuário com token:', accessToken);
         return this.http.get<any>(`${this.backendUrl}/auth/user-info`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`
@@ -196,7 +171,4 @@ export class AuthService {
         }
     }
 
-    private grantTypeIsSocialLogin(grantType: GrantType): boolean {
-        return grantType == GrantType.GOOGLE || grantType == GrantType.INSTAGRAM;
-    }
 }

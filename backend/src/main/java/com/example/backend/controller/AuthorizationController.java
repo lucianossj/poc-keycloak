@@ -1,9 +1,9 @@
 package com.example.backend.controller;
 
-import com.example.backend.model.LoginRequest;
 import com.example.backend.model.LoginResponse;
 import com.example.backend.service.AuthorizationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,15 +11,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "false")
 public class AuthorizationController {
 
     @Autowired
     private AuthorizationService authorizationService;
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authorizationService.login(request));
+    @GetMapping(value = "/url", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<LoginResponse> getUrl() {
+        return ResponseEntity.ok(authorizationService.getUrl());
     }
 
     @PostMapping("/token")
