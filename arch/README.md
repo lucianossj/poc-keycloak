@@ -1,6 +1,6 @@
-# Arch - Infrastructure Configuration
+# 🏗️ Infraestrutura - Keycloak & PostgreSQL
 
-Este diretório contém a configuração de infraestrutura para rodar o Keycloak e PostgreSQL localmente.
+Configuração de infraestrutura para autenticação Google OAuth via Keycloak com PostgreSQL.
 
 ## Requisitos
 
@@ -44,15 +44,25 @@ docker-compose up -d
 
 ## Acessos
 
-### Keycloak
-- URL: http://localhost:8080
-- Admin Console: http://localhost:8080/admin
-- Credenciais: Confira o arquivo `.env` ou `docker-compose.yml`
+### 🔐 Keycloak
+- **URL**: http://localhost:8080
+- **Admin Console**: http://localhost:8080/admin  
+- **Credenciais**: `admin` / `admin`
+- **Realm**: `master` (configurado para Google OAuth)
 
-### PostgreSQL
-- Host: localhost
-- Porta: 5432
-- Credenciais: Confira o arquivo `.env` ou `docker-compose.yml`
+### 🐘 PostgreSQL  
+- **Host**: localhost
+- **Porta**: 5432
+- **Database**: `keycloak`
+- **Credenciais**: Definidas em `docker-compose.yml`
+
+## 🔧 Configuração Google OAuth
+
+Após subir a infraestrutura, configure no Keycloak Admin Console:
+
+1. **Identity Providers** → Add provider → **Google**
+2. **Client ID** e **Client Secret** do Google Cloud Console  
+3. **Redirect URI**: `http://localhost:8080/realms/master/broker/google/endpoint`
 
 ## Estrutura
 
