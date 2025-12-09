@@ -41,9 +41,31 @@ services:
     networks:
       - keycloak-network
 
+  fake-cartao-db:
+    image: mongo:7.0
+    container_name: fake-cartao-db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-fake_cartao}
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
+  mongo_data:
 
 networks:
   keycloak-network:
+    driver: bridge
+  app-network:
     driver: bridge

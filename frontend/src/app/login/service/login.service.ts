@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, catchError, map, Observable, switchMap, throwError } from 'rxjs';
+import { catchError, map, Observable, switchMap, throwError } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 
 export interface User {
@@ -96,6 +96,8 @@ export class AuthService {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('id_token');
+        localStorage.removeItem('user_info');
+        localStorage.removeItem('is_first_login');
 
         if (logoutUrl) {
             window.location.href = logoutUrl;
@@ -129,6 +131,15 @@ export class AuthService {
         localStorage.setItem('access_token', response.access_token);    // Autorizar requisições
         localStorage.setItem('refresh_token', response.refresh_token);  // Renovar token
         localStorage.setItem('id_token', response.id_token);            // Identidade do usuário
+        
+        if (response.user_info) {
+            localStorage.setItem('user_info', JSON.stringify(response.user_info));
+        }
+        
+        if (response.is_first_login !== undefined) {
+            localStorage.setItem('is_first_login', String(response.is_first_login));
+        }
+        
         return response;
     }
 
@@ -141,11 +152,21 @@ export class AuthService {
     }
 
     private handleCallbackSuccess(): void {
-        this.toastService.showSuccess(
-            'Login Realizado',
-            'Bem-vindo! Login realizado com sucesso.'
-        );
-        this.router.navigate(['/home']);
+        const isFirstLogin = localStorage.getItem('is_first_login') === 'true';
+        
+        if (isFirstLogin) {
+            this.toastService.showInfo(
+                'Bem-vindo!',
+                'Complete seu cadastro para continuar'
+            );
+            this.router.navigate(['/complete-profile']);
+        } else {
+            this.toastService.showSuccess(
+                'Login Realizado',
+                'Bem-vindo de volta!'
+            );
+            this.router.navigate(['/home']);
+        }
     }
 
     private handleCallbackError(error: any, title: string, message: string): Observable<never> {
@@ -169,6 +190,15 @@ export class AuthService {
                 this.logout();
             }
         }
+    }
+
+    public getStoredUserInfo(): any {
+        const userInfoStr = localStorage.getItem('user_info');
+        return userInfoStr ? JSON.parse(userInfoStr) : null;
+    }
+
+    public clearFirstLoginFlag(): void {
+        localStorage.removeItem('is_first_login');
     }
 
 }

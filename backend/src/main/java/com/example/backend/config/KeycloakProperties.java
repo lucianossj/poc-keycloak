@@ -16,8 +16,9 @@ public class KeycloakProperties {
     private String redirectUri = "http://localhost:4200/auth/callback";
     private String postLogoutRedirectUri = "http://localhost:4200/login";
     private String idpHint = "google";
+    private String adminUsername = "admin";
+    private String adminPassword = "admin";
 
-    // Helper methods
     public String getTokenEndpoint() {
         return url + "/realms/" + realm + "/protocol/openid-connect/token";
     }
@@ -32,6 +33,14 @@ public class KeycloakProperties {
     
     public String getUserInfoEndpoint() {
         return url + "/realms/" + realm + "/protocol/openid-connect/userinfo";
+    }
+    
+    public String getAdminUsersEndpoint() {
+        return url + "/admin/realms/" + realm + "/users";
+    }
+    
+    public String getAdminTokenEndpoint() {
+        return url + "/realms/master/protocol/openid-connect/token";
     }
     
     public boolean hasClientSecret() {
