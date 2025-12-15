@@ -23,6 +23,11 @@ public class AuthorizationController {
         return ResponseEntity.ok(authorizationService.getUrl());
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO registerRequest) {
+        return ResponseEntity.ok(authorizationService.register(registerRequest));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
         return ResponseEntity.ok(authorizationService.login(loginRequest));
@@ -45,8 +50,4 @@ public class AuthorizationController {
         return ResponseEntity.ok(authorizationService.getUserInfo(bearerToken));
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO registerRequest) {
-        return ResponseEntity.ok(authorizationService.register(registerRequest));
-    }
 }

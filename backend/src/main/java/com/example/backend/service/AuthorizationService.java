@@ -143,23 +143,9 @@ public class AuthorizationService {
     }
 
     public Map<String, Object> register(RegisterRequestDTO registerRequest) {
-        log.info("Registrando novo usuário: {}", registerRequest.getEmail());
-        
-        if (customerRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new RuntimeException("Email já cadastrado");
-        }
-        
-        String cleanDocument = registerRequest.getDocument() != null ? 
-            registerRequest.getDocument().replaceAll("[^0-9]", "") : null;
-        
-        if (cleanDocument == null || cleanDocument.isEmpty()) {
-            throw new RuntimeException("CPF é obrigatório");
-        }
-        
-        if (customerRepository.existsByDocument(cleanDocument)) {
-            throw new RuntimeException("CPF já cadastrado");
-        }
-        
+        String cleanDocument = getCleanDocument(registerRequest);
+        validateDataToRegister(registerRequest, cleanDocument);
+
         String[] nameParts = registerRequest.getName().split(" ", 2);
         String firstName = nameParts[0];
         String lastName = nameParts.length > 1 ? nameParts[1] : "";
@@ -172,46 +158,73 @@ public class AuthorizationService {
         }
         
         try {
-            // IMPORTANTE: Usar CPF como username desde o início
-            String keycloakUserId = keycloakAdminService.createUser(
-                cleanDocument,  // username = CPF
-                registerRequest.getEmail(),  // email
-                firstName,
-                lastName,
-                attributes,
-                registerRequest.getPassword()
-            );
-            
-            CustomerDTO customer = CustomerDTO.builder()
-                    .name(registerRequest.getName())
-                    .email(registerRequest.getEmail())
-                    .document(cleanDocument)
-                    .birthDate(registerRequest.getBirthDate())
-                    .keycloakUserId(keycloakUserId)
-                    .build();
-            
-            customerService.create(customer);
-            
-            log.info("✅ Usuário registrado com sucesso: {}", registerRequest.getEmail());
-            
-            // Aguardar 500ms para garantir que o usuário esteja disponível no Keycloak
-            Thread.sleep(500);
-            
-            LoginRequestDTO loginRequest = LoginRequestDTO.builder()
-                    .email(registerRequest.getEmail())
-                    .password(registerRequest.getPassword())
-                    .build();
-            
-            return login(loginRequest);
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Thread interrompida: {}", e.getMessage());
-            throw new RuntimeException("Erro interno no servidor", e);
+            String keycloakUserId = createKeycloakUser(registerRequest, cleanDocument, firstName, lastName, attributes);
+            createCustomer(registerRequest, cleanDocument, keycloakUserId);
+
+            return logNewUserIn(registerRequest);
         } catch (Exception e) {
             log.error("Erro ao registrar usuário: {}", e.getMessage(), e);
             throw new RuntimeException("Falha ao criar usuário: " + e.getMessage(), e);
         }
+    }
+
+    private void validateDataToRegister(RegisterRequestDTO registerRequest, String cleanDocument) {
+        if (customerRepository.existsByEmail(registerRequest.getEmail())) {
+            throw new RuntimeException("Email já cadastrado");
+        }
+
+        if (cleanDocument == null || cleanDocument.isEmpty()) {
+            throw new RuntimeException("CPF é obrigatório");
+        }
+
+        if (customerRepository.existsByDocument(cleanDocument)) {
+            throw new RuntimeException("CPF já cadastrado");
+        }
+    }
+
+    private static String getCleanDocument(RegisterRequestDTO registerRequest) {
+        return registerRequest.getDocument() != null ?
+                registerRequest.getDocument().replaceAll("[^0-9]", "") : "";
+    }
+
+    private String createKeycloakUser(
+            RegisterRequestDTO registerRequest,
+            String cleanDocument,
+            String firstName,
+            String lastName,
+            Map<String, List<String>> attributes) {
+        return keycloakAdminService.createUser(
+                cleanDocument,
+                registerRequest.getEmail(),
+                firstName,
+                lastName,
+                attributes,
+                registerRequest.getPassword()
+        );
+    }
+
+    private void createCustomer(RegisterRequestDTO registerRequest, String cleanDocument, String keycloakUserId) {
+        CustomerDTO customer = CustomerDTO.builder()
+                .name(registerRequest.getName())
+                .email(registerRequest.getEmail())
+                .document(cleanDocument)
+                .birthDate(registerRequest.getBirthDate())
+                .keycloakUserId(keycloakUserId)
+                .build();
+
+        customerService.create(customer);
+    }
+
+    private Map<String, Object> logNewUserIn(RegisterRequestDTO registerRequest) {
+        LoginRequestDTO loginRequest = getLoginRequest(registerRequest);
+        return login(loginRequest);
+    }
+
+    private static LoginRequestDTO getLoginRequest(RegisterRequestDTO registerRequest) {
+        return LoginRequestDTO.builder()
+                .email(registerRequest.getEmail())
+                .password(registerRequest.getPassword())
+                .build();
     }
 
     private String getUsernameForLogin(String email) {
