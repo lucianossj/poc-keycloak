@@ -239,14 +239,6 @@ export class AuthService {
         return response;
     }
 
-    private getUserInfo(accessToken: string): Observable<any> {
-        return this.http.get<any>(`${this.backendUrl}/auth/user-info`, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-    }
-
     private handleCallbackSuccess(): void {
         const isFirstLogin = localStorage.getItem('is_first_login') === 'true';
         
