@@ -111,7 +111,6 @@ export class AuthService {
 
     public logout(): void {
         const idToken = localStorage.getItem('id_token');
-        const accessToken = localStorage.getItem('access_token');
 
         if (idToken) {
             this.http.post<any>(`${this.backendUrl}/auth/logout`, {
