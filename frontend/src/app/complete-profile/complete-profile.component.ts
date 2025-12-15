@@ -65,6 +65,11 @@ export class CompleteProfileComponent implements OnInit {
     this.loading = true;
 
     try {
+      // Envia CPF e data de nascimento para o backend
+      // O backend irá:
+      // 1. Salvar no MongoDB
+      // 2. Atualizar atributos customizados no Keycloak
+      // 3. SE for login social (Google): Atualizar username de email para CPF
       await this.completeProfileService.updateCustomerInfo(
         this.keycloakUserId,
         this.document,

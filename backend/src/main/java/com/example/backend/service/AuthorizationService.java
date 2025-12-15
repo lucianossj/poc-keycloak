@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.config.KeycloakProperties;
 import com.example.backend.integration.KeycloakIntegration;
+import com.example.backend.model.Customer;
 import com.example.backend.model.LoginResponse;
 import com.example.backend.model.dto.CustomerDTO;
 import com.example.backend.model.dto.LoginRequestDTO;
@@ -131,9 +132,31 @@ public class AuthorizationService {
     }
     
     public Map<String, Object> login(LoginRequestDTO loginRequest) {
-        log.info("Login com senha - Email: {}, Password length: {}", 
+        log.info("Login com senha - Email/CPF: {}, Password length: {}", 
                 loginRequest.getEmail(), 
                 loginRequest.getPassword() != null ? loginRequest.getPassword().length() : 0);
+        
+        // Determinar se é email ou CPF
+        String username = loginRequest.getEmail();
+        
+        // Se não é um CPF (só números), buscar o CPF pelo email no MongoDB
+        if (!username.matches("^\\d+$")) {
+            try {
+                Customer customer = customerRepository.findByEmail(username)
+                    .orElse(null);
+                
+                if (customer != null && customer.getDocument() != null) {
+                    username = customer.getDocument(); // Usar CPF como username
+                    log.info("📧 Email fornecido. Username Keycloak será: {} (CPF)", username);
+                } else {
+                    log.info("📧 Email fornecido mas CPF não encontrado. Tentando login com email: {}", username);
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ Erro ao buscar CPF por email. Tentando login com email: {}", e.getMessage());
+            }
+        } else {
+            log.info("🆔 CPF fornecido diretamente: {}", username);
+        }
         
         String tokenUrl = keycloakProperties.getTokenEndpoint();
         
@@ -150,12 +173,12 @@ public class AuthorizationService {
             body.add("client_secret", keycloakProperties.getClientSecret());
         }
         
-        body.add("username", loginRequest.getEmail());
+        body.add("username", username);  // Usar CPF como username
         body.add("password", loginRequest.getPassword());
         
         log.info("📤 Enviando requisição para: {}", tokenUrl);
         log.info("📤 Body: grant_type=password, client_id={}, username={}", 
-                keycloakProperties.getClientId(), loginRequest.getEmail());
+                keycloakProperties.getClientId(), username);
         
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
         
@@ -216,7 +239,11 @@ public class AuthorizationService {
         String cleanDocument = registerRequest.getDocument() != null ? 
             registerRequest.getDocument().replaceAll("[^0-9]", "") : null;
         
-        if (cleanDocument != null && customerRepository.existsByDocument(cleanDocument)) {
+        if (cleanDocument == null || cleanDocument.isEmpty()) {
+            throw new RuntimeException("CPF é obrigatório");
+        }
+        
+        if (customerRepository.existsByDocument(cleanDocument)) {
             throw new RuntimeException("CPF já cadastrado");
         }
         
@@ -225,16 +252,17 @@ public class AuthorizationService {
         String lastName = nameParts.length > 1 ? nameParts[1] : "";
         
         Map<String, List<String>> attributes = new HashMap<>();
-        if (cleanDocument != null) {
-            attributes.put("document", List.of(cleanDocument));
-        }
+        attributes.put("document", List.of(cleanDocument));
+        
         if (registerRequest.getBirthDate() != null) {
             attributes.put("birthDate", List.of(registerRequest.getBirthDate().toString()));
         }
         
         try {
+            // IMPORTANTE: Usar CPF como username desde o início
             String keycloakUserId = keycloakAdminService.createUser(
-                registerRequest.getEmail(),
+                cleanDocument,  // username = CPF
+                registerRequest.getEmail(),  // email
                 firstName,
                 lastName,
                 attributes,

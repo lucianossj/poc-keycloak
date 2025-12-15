@@ -160,38 +160,27 @@ public class CustomerService {
                 
                 keycloakAdminService.updateCustomAttributes(keycloakUserId, attributes);
                 
-                // ATUALIZAR USERNAME PARA CPF
-                // Sempre que o CPF for informado, garantir que o username seja o CPF
+                // ATUALIZAR USERNAME PARA CPF (para usuários de login social)
+                // Usuários criados com senha já têm CPF como username desde o início
                 if (cleanDocument != null) {
                     try {
-                        // Buscar usuário atual do Keycloak para verificar username
-                        java.util.Map<String, Object> currentUser = keycloakAdminService.getUserById(keycloakUserId);
-                        log.debug("Current Keycloak user object: {}", currentUser);
-                        String currentUsername = currentUser != null ? (String) currentUser.get("username") : null;
+                        // Verificar se é um usuário de login social (federated identity)
+                        java.util.List<java.util.Map<String, Object>> federatedIdentities = 
+                            keycloakAdminService.getFederatedIdentities(keycloakUserId);
                         
-                        // Se o username atual não é o CPF, atualizar
-                        if (currentUsername != null && !currentUsername.equals(cleanDocument)) {
-                            log.info("🔄 Username atual ({}) diferente do CPF ({}). Atualizando...", currentUsername, cleanDocument);
-                            
-                            // updateUsername retorna o NOVO keycloakUserId (pois o usuário foi recriado)
-                            String newKeycloakUserId = keycloakAdminService.updateUsername(keycloakUserId, cleanDocument);
-                            
-                            // Se o ID mudou, atualizar no MongoDB
-                            if (!newKeycloakUserId.equals(keycloakUserId)) {
-                                log.info("🔄 Atualizando keycloakUserId no MongoDB: {} -> {}", keycloakUserId, newKeycloakUserId);
-                                customer.setKeycloakUserId(newKeycloakUserId);
-                                customerRepository.save(customer);
-                            }
-                            
-                            log.info("✅ Username atualizado com sucesso de {} para CPF: {}", currentUsername, cleanDocument);
-                        } else if (currentUsername != null && currentUsername.equals(cleanDocument)) {
-                            log.info("ℹ️ Username já é o CPF: {}. Nenhuma atualização necessária.", cleanDocument);
+                        if (federatedIdentities != null && !federatedIdentities.isEmpty()) {
+                            log.info("� Usuário tem login social. Atualizando username para CPF...");
+                            keycloakAdminService.updateUsername(keycloakUserId, cleanDocument);
+                            log.info("✅ Username atualizado com sucesso para CPF: {}", cleanDocument);
+                        } else {
+                            log.info("ℹ️ Usuário criado com senha. Username já é CPF desde a criação.");
                         }
                     } catch (Exception usernameError) {
-                        log.error("❌ Erro ao atualizar username (atributos foram salvos)", usernameError);
+                        log.error("❌ Erro ao atualizar username (atributos foram salvos): {}", usernameError.getMessage());
                         // Não propagar o erro - os atributos já foram salvos
                     }
                 }
+                
             } catch (Exception e) {
                 log.error("❌ Erro ao sincronizar atributos com Keycloak (dados salvos no MongoDB): {}", e.getMessage());
             }
