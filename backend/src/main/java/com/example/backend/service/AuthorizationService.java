@@ -7,6 +7,7 @@ import com.example.backend.model.LoginResponse;
 import com.example.backend.model.dto.CustomerDTO;
 import com.example.backend.model.dto.LoginRequestDTO;
 import com.example.backend.model.dto.RegisterRequestDTO;
+import com.example.backend.record.UserIdentity;
 import com.example.backend.repository.CustomerRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,76 +52,12 @@ public class AuthorizationService {
 
     public Map<String, Object> exchangeCodeForToken(String code) {
         Map<String, Object> tokens = keycloakIntegration.exchangeCodeForToken(code);
+        Map<String, Object> userInfo = fetchUserInfo(tokens);
         
-        String accessToken = (String) tokens.get("access_token");
-        Map<String, Object> userInfo = keycloakIntegration.getUserInfo("Bearer " + accessToken);
+        UserIdentity userIdentity = extractUserIdentity(userInfo);
+        boolean isFirstLogin = handleCustomerCreationOrLinking(userIdentity);
         
-        String keycloakUserId = (String) userInfo.get("sub");
-        String email = (String) userInfo.get("email");
-        String name = (String) userInfo.get("name");
-        
-        boolean customerExistsByKeycloakId = customerRepository.existsByKeycloakUserId(keycloakUserId);
-        boolean customerExistsByEmail = customerRepository.existsByEmail(email);
-        
-        boolean isFirstLogin = false;
-        
-        if (!customerExistsByKeycloakId && customerExistsByEmail) {
-            log.info("Usuário já existe com email {} mas sem keycloakUserId. Vinculando conta Google...", email);
-            
-            try {
-                customerRepository.findByEmail(email).ifPresent(existingCustomer -> {
-                    existingCustomer.setKeycloakUserId(keycloakUserId);
-                    existingCustomer.setUpdatedAt(LocalDateTime.now());
-                    customerRepository.save(existingCustomer);
-                    log.info("Conta Google vinculada ao customer existente: {}", existingCustomer.getId());
-                });
-                
-                isFirstLogin = shouldShowCompleteProfile(email);
-                
-            } catch (Exception e) {
-                log.error("Erro ao vincular conta Google ao customer existente: {}", e.getMessage());
-            }
-            
-        } else if (!customerExistsByKeycloakId && !customerExistsByEmail) {
-            log.info("Primeiro login detectado para novo usuário: {} ({})", name, email);
-            
-            try {
-                CustomerDTO newCustomer = CustomerDTO.builder()
-                        .name(name)
-                        .email(email)
-                        .keycloakUserId(keycloakUserId)
-                        .build();
-                
-                customerService.create(newCustomer);
-                log.info("Customer criado com sucesso no primeiro login: {}", email);
-                
-                isFirstLogin = true;
-                
-            } catch (Exception e) {
-                log.error("Erro ao criar customer no primeiro login: {}", e.getMessage());
-            }
-        } else {
-            log.info("Login de usuário existente: {} ({})", name, email);
-            isFirstLogin = shouldShowCompleteProfile(keycloakUserId);
-        }
-        
-        Map<String, Object> response = new HashMap<>(tokens);
-        response.put("is_first_login", isFirstLogin);
-        response.put("user_info", userInfo);
-        
-        return response;
-    }
-    
-    private boolean shouldShowCompleteProfile(String identifier) {
-        try {
-            return customerRepository.findByKeycloakUserId(identifier)
-                    .or(() -> customerRepository.findByEmail(identifier))
-                    .map(customer -> customer.getDocument() == null || customer.getBirthDate() == null)
-                    .orElse(false);
-        } catch (Exception e) {
-            log.error("Erro ao verificar necessidade de complete-profile: {}", e.getMessage());
-            return false;
-        }
+        return buildAuthResponse(tokens, userInfo, isFirstLogin);
     }
 
     public Map<String, Object> logout(String idToken) {
@@ -299,4 +236,116 @@ public class AuthorizationService {
         }
     }
 
+    private Map<String, Object> fetchUserInfo(Map<String, Object> tokens) {
+        String accessToken = (String) tokens.get("access_token");
+        return keycloakIntegration.getUserInfo("Bearer " + accessToken);
+    }
+
+    private UserIdentity extractUserIdentity(Map<String, Object> userInfo) {
+        return new UserIdentity(
+                (String) userInfo.get("sub"),
+                (String) userInfo.get("email"),
+                (String) userInfo.get("name")
+        );
+    }
+
+    private boolean handleCustomerCreationOrLinking(UserIdentity userIdentity) {
+        boolean existsByKeycloakId = customerRepository.existsByKeycloakUserId(userIdentity.keycloakUserId());
+        boolean existsByEmail = customerRepository.existsByEmail(userIdentity.email());
+
+        if (shouldLinkExistingAccount(existsByKeycloakId, existsByEmail)) {
+            return linkGoogleAccountToExistingCustomer(userIdentity);
+        }
+
+        if (shouldCreateNewCustomer(existsByKeycloakId, existsByEmail)) {
+            return createNewCustomerForFirstLogin(userIdentity);
+        }
+
+        return handleExistingCustomerLogin(userIdentity);
+    }
+
+    private boolean shouldLinkExistingAccount(boolean existsByKeycloakId, boolean existsByEmail) {
+        return !existsByKeycloakId && existsByEmail;
+    }
+
+    private boolean shouldCreateNewCustomer(boolean existsByKeycloakId, boolean existsByEmail) {
+        return !existsByKeycloakId && !existsByEmail;
+    }
+
+    private boolean linkGoogleAccountToExistingCustomer(UserIdentity userIdentity) {
+        log.info("Usuário já existe com email {} mas sem keycloakUserId. Vinculando conta Google...",
+                userIdentity.email());
+
+        try {
+            customerRepository.findByEmail(userIdentity.email()).ifPresent(customer -> {
+                linkKeycloakIdToCustomer(customer, userIdentity.keycloakUserId());
+                log.info("Conta Google vinculada ao customer existente: {}", customer.getId());
+            });
+
+            return shouldShowCompleteProfile(userIdentity.email());
+
+        } catch (Exception e) {
+            log.error("Erro ao vincular conta Google ao customer existente: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private void linkKeycloakIdToCustomer(Customer customer, String keycloakUserId) {
+        customer.setKeycloakUserId(keycloakUserId);
+        customer.setUpdatedAt(LocalDateTime.now());
+        customerRepository.save(customer);
+    }
+
+    private boolean createNewCustomerForFirstLogin(UserIdentity userIdentity) {
+        log.info("Primeiro login detectado para novo usuário: {} ({})",
+                userIdentity.name(), userIdentity.email());
+
+        try {
+            CustomerDTO newCustomer = buildNewCustomerDTO(userIdentity);
+            customerService.create(newCustomer);
+
+            log.info("Customer criado com sucesso no primeiro login: {}", userIdentity.email());
+            return true;
+
+        } catch (Exception e) {
+            log.error("Erro ao criar customer no primeiro login: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private CustomerDTO buildNewCustomerDTO(UserIdentity userIdentity) {
+        return CustomerDTO.builder()
+                .name(userIdentity.name())
+                .email(userIdentity.email())
+                .keycloakUserId(userIdentity.keycloakUserId())
+                .build();
+    }
+
+    private boolean handleExistingCustomerLogin(UserIdentity userIdentity) {
+        log.info("Login de usuário existente: {} ({})", userIdentity.name(), userIdentity.email());
+        return shouldShowCompleteProfile(userIdentity.keycloakUserId());
+    }
+
+    private Map<String, Object> buildAuthResponse(
+            Map<String, Object> tokens,
+            Map<String, Object> userInfo,
+            boolean isFirstLogin) {
+        Map<String, Object> response = new HashMap<>(tokens);
+        response.put("is_first_login", isFirstLogin);
+        response.put("user_info", userInfo);
+        return response;
+    }
+
+    private boolean shouldShowCompleteProfile(String identifier) {
+        try {
+            return customerRepository.findByKeycloakUserId(identifier)
+                    .or(() -> customerRepository.findByEmail(identifier))
+                    .map(customer -> customer.getDocument() == null || customer.getBirthDate() == null)
+                    .orElse(false);
+        } catch (Exception e) {
+            log.error("Erro ao verificar necessidade de complete-profile: {}", e.getMessage());
+            return false;
+        }
+    }
+    
 }

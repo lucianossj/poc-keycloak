@@ -74,8 +74,7 @@ export class AuthService {
         try {
             this.exchangeCodeForTokens(code)
                 .pipe(
-                    map(response => this.setTokensOnStorageAndReturn(response)),
-                    switchMap(response => this.getUserInfo(response?.access_token)),
+                    map(response => this.setDataOnStorage(response)),
                     catchError(error => this.handleCallbackError(error, 'Erro na Autenticação', 'Falha ao processar os dados de autenticação.'))
                 )
                 .subscribe({
@@ -211,15 +210,6 @@ export class AuthService {
         };
     }
 
-    private setDataOnStorage(response: any): void {
-        localStorage.setItem('access_token', response.access_token);
-        localStorage.setItem('refresh_token', response.refresh_token);
-        
-        if (response.id_token) {
-            localStorage.setItem('id_token', response.id_token);
-        }
-    }
-
     private validateFirstLoginAndNavigate(response: any): void {
         if (response.is_first_login) {
             this.router.navigate(['/complete-profile']);
@@ -232,14 +222,12 @@ export class AuthService {
         return this.http.post<any>(`${this.backendUrl}/auth/token`, { code: code });
     }
 
-    private setTokensOnStorageAndReturn(response: any): any {
-        console.log('Tokens recebidos:', response);
-        localStorage.setItem('access_token', response.access_token);    // Autorizar requisições
-        localStorage.setItem('refresh_token', response.refresh_token);  // Renovar token
+    private setDataOnStorage(response: any): any {
+        localStorage.setItem('access_token', response.access_token);
+        localStorage.setItem('refresh_token', response.refresh_token);
         
-        // id_token is optional (only present with OAuth2 flow or when 'openid' scope is used)
         if (response.id_token) {
-            localStorage.setItem('id_token', response.id_token);        // Identidade do usuário
+            localStorage.setItem('id_token', response.id_token);
         }
         
         if (response.user_info) {
