@@ -355,6 +355,110 @@ $shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0
   }
 }
 
+// Login Form
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $text-color;
+  }
+
+  input {
+    padding: 0.75rem 1rem;
+    border: 2px solid $border-color;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    @include transition(all);
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    &::placeholder {
+      color: $text-light;
+    }
+  }
+}
+
+.submit-btn {
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: $white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  @include transition(all);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Divider
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: $border-color;
+  }
+
+  span {
+    position: relative;
+    background: $white;
+    padding: 0 1rem;
+    color: $text-light;
+    font-size: 0.875rem;
+  }
+}
+
+// Register Link
+.register-link {
+  text-align: center;
+  font-size: 0.875rem;
+  color: $text-light;
+  margin-top: 1.5rem;
+
+  a {
+    color: $primary-color;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 // Responsive
 @media (max-width: 480px) {
   .login-card {

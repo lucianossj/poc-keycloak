@@ -71,25 +71,31 @@ export class AuthService {
 
     public logout(): void {
         const idToken = localStorage.getItem('id_token');
+        const accessToken = localStorage.getItem('access_token');
 
-        this.http.post<any>(`${this.backendUrl}/auth/logout`, {
-            id_token: idToken
-        }).subscribe({
-            next: (response) => {
-                if (response.logoutUrl) {
-                    this.handleLogoutSuccess(response.logoutUrl);
-                } else {
+        if (idToken) {
+            this.http.post<any>(`${this.backendUrl}/auth/logout`, {
+                id_token: idToken
+            }).subscribe({
+                next: (response) => {
+                    if (response.logoutUrl) {
+                        this.handleLogoutSuccess(response.logoutUrl);
+                    } else {
+                        this.handleLogoutSuccess(`/login`);
+                    }
+                },
+                error: () => {
+                    this.toastService.showError(
+                        'Erro no Logout',
+                        'Ocorreu um erro ao realizar logout. Limpando dados locais...'
+                    );
                     this.handleLogoutSuccess(`/login`);
                 }
-            },
-            error: () => {
-                this.toastService.showError(
-                    'Erro no Logout',
-                    'Ocorreu um erro ao realizar logout. Limpando dados locais...'
-                );
-                this.handleLogoutSuccess(`/login`);
-            }
-        });
+            });
+        } else {
+            console.log('No id_token available, performing local logout only');
+            this.handleLogoutSuccess(`/login`);
+        }
     }
 
     private handleLogoutSuccess(logoutUrl?: string): void {
@@ -128,9 +134,14 @@ export class AuthService {
     }
 
     private setTokensOnStorageAndReturn(response: any): any {
+        console.log('Tokens recebidos:', response);
         localStorage.setItem('access_token', response.access_token);    // Autorizar requisições
         localStorage.setItem('refresh_token', response.refresh_token);  // Renovar token
-        localStorage.setItem('id_token', response.id_token);            // Identidade do usuário
+        
+        // id_token is optional (only present with OAuth2 flow or when 'openid' scope is used)
+        if (response.id_token) {
+            localStorage.setItem('id_token', response.id_token);        // Identidade do usuário
+        }
         
         if (response.user_info) {
             localStorage.setItem('user_info', JSON.stringify(response.user_info));

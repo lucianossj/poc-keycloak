@@ -1,6 +1,8 @@
 package com.example.backend.controller;
 
 import com.example.backend.model.LoginResponse;
+import com.example.backend.model.dto.LoginRequestDTO;
+import com.example.backend.model.dto.RegisterRequestDTO;
 import com.example.backend.service.AuthorizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -36,5 +38,15 @@ public class AuthorizationController {
     @GetMapping("/user-info")
     public ResponseEntity<?> userInfo(@RequestHeader("Authorization") String bearerToken) {
         return ResponseEntity.ok(authorizationService.getUserInfo(bearerToken));
+    }
+    
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
+        return ResponseEntity.ok(authorizationService.login(loginRequest));
+    }
+    
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO registerRequest) {
+        return ResponseEntity.ok(authorizationService.register(registerRequest));
     }
 }

@@ -165,4 +165,109 @@ public class KeycloakAdminService {
             throw new RuntimeException("Falha ao deletar usuário do Keycloak", e);
         }
     }
+
+    public String createUser(String email, String firstName, String lastName, 
+                            Map<String, List<String>> attributes, String password) {
+        String token = getAdminAccessToken();
+        String url = keycloakProperties.getAdminUsersEndpoint();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("username", email);
+        body.put("email", email);
+        body.put("firstName", firstName);
+        body.put("lastName", lastName);
+        body.put("enabled", true);
+        body.put("emailVerified", true);
+        
+        if (attributes != null && !attributes.isEmpty()) {
+            body.put("attributes", attributes);
+        }
+        
+        if (password != null && !password.isEmpty()) {
+            Map<String, Object> credential = new HashMap<>();
+            credential.put("type", "password");
+            credential.put("value", password);
+            credential.put("temporary", false);
+            body.put("credentials", List.of(credential));
+            log.info("🔑 Configurando senha para usuário: {} (length: {})", email, password.length());
+        }
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            log.info("Criando usuário no Keycloak: {}", email);
+            
+            ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, request, Void.class);
+            
+            String locationHeader = response.getHeaders().getFirst("Location");
+            if (locationHeader != null) {
+                String userId = locationHeader.substring(locationHeader.lastIndexOf('/') + 1);
+                log.info("✅ Usuário criado no Keycloak: {} (ID: {}) {}", 
+                    email, userId, password != null ? "com senha" : "sem senha");
+                return userId;
+            } else {
+                Map<String, Object> createdUser = getUserByEmail(email);
+                if (createdUser != null) {
+                    String userId = (String) createdUser.get("id");
+                    log.info("✅ Usuário criado no Keycloak: {} (ID: {}) {}", 
+                        email, userId, password != null ? "com senha" : "sem senha");
+                    return userId;
+                }
+            }
+            
+            throw new RuntimeException("Não foi possível obter o ID do usuário criado");
+            
+        } catch (Exception e) {
+            log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage());
+            throw new RuntimeException("Falha ao criar usuário no Keycloak: " + e.getMessage(), e);
+        }
+    }
+
+    public void linkIdentityProvider(String keycloakUserId, String identityProvider, 
+                                     String federatedUserId, String federatedUsername) {
+        String token = getAdminAccessToken();
+        String url = keycloakProperties.getAdminUsersEndpoint() + "/" + keycloakUserId + 
+                     "/federated-identity/" + identityProvider;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("identityProvider", identityProvider);
+        body.put("userId", federatedUserId);
+        body.put("userName", federatedUsername);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.POST, request, Void.class);
+            log.info("✅ Identity Provider '{}' vinculado ao usuário: {}", identityProvider, keycloakUserId);
+        } catch (Exception e) {
+            log.error("Erro ao vincular Identity Provider: {}", e.getMessage());
+            throw new RuntimeException("Falha ao vincular Identity Provider", e);
+        }
+    }
+
+    public List<Map<String, Object>> getFederatedIdentities(String keycloakUserId) {
+        String token = getAdminAccessToken();
+        String url = keycloakProperties.getAdminUsersEndpoint() + "/" + keycloakUserId + "/federated-identity";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List> response = restTemplate.exchange(url, HttpMethod.GET, request, List.class);
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Erro ao buscar federated identities: {}", e.getMessage());
+            return List.of();
+        }
+    }
 }

@@ -11,6 +11,47 @@
       <p>Faça login para continuar</p>
     </div>
 
+    <!-- Login Form -->
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="seu&#64;email.com"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Digite sua senha"
+          required
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="submit-btn"
+        [disabled]="loading"
+      >
+        <span *ngIf="!loading">Entrar</span>
+        <span *ngIf="loading">Entrando...</span>
+      </button>
+    </form>
+
+    <!-- Divider -->
+    <div class="divider">
+      <span>ou</span>
+    </div>
+
     <!-- Social Login Buttons -->
     <div class="social-login">
       <button class="social-btn google-btn" (click)="loginWithGoogle()">
@@ -22,7 +63,12 @@
         </svg>
         <span>Continuar com Google</span>
       </button>
-      
     </div>
 
+    <!-- Register Link -->
+    <div class="register-link">
+      <span>Não tem uma conta? </span>
+      <a (click)="goToRegister()">Criar conta</a>
+    </div>
+  </div>
 </div>

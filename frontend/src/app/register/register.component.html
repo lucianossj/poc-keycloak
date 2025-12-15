@@ -1,0 +1,102 @@
+<div class="register-container">
+  <div class="register-card">
+    <div class="register-header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </div>
+      <h1>Criar Conta</h1>
+      <p>Preencha os dados para se cadastrar</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-group">
+        <label for="name">Nome Completo</label>
+        <input
+          type="text"
+          id="name"
+          [(ngModel)]="name"
+          name="name"
+          placeholder="Digite seu nome completo"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="seu&#64;email.com"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="document">CPF</label>
+        <input
+          type="text"
+          id="document"
+          [(ngModel)]="document"
+          (input)="formatCPF($event)"
+          name="document"
+          placeholder="000.000.000-00"
+          maxlength="14"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="birthDate">Data de Nascimento</label>
+        <input
+          type="date"
+          id="birthDate"
+          [(ngModel)]="birthDate"
+          name="birthDate"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Mínimo 6 caracteres"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmar Senha</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          placeholder="Digite a senha novamente"
+          required
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="submit-btn"
+        [disabled]="loading"
+      >
+        <span *ngIf="!loading">Criar Conta</span>
+        <span *ngIf="loading" class="loading-spinner">Criando...</span>
+      </button>
+
+      <div class="login-link">
+        <span>Já tem uma conta? </span>
+        <a (click)="goToLogin()">Fazer login</a>
+      </div>
+    </form>
+  </div>
+</div>
