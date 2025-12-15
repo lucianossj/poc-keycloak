@@ -28,10 +28,10 @@ public class Customer {
     
     private LocalDate birthDate;
     
-    private String document; // CPF
+    private String document;
     
     @Indexed(unique = true)
-    private String keycloakUserId; // sub do Keycloak
+    private String keycloakUserId;
     
     private LocalDateTime createdAt;
     

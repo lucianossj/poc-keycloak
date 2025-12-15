@@ -30,7 +30,7 @@ public class CustomerDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     
-    private String document; // CPF
+    private String document;
     
     private String keycloakUserId;
 }
