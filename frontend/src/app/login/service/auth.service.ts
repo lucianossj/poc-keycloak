@@ -25,7 +25,6 @@ export class AuthService {
         private http: HttpClient,
         private toastService: ToastService
     ) {
-        this.checkExistingToken();
     }
 
     public registerUser(registerData: any): Observable<any> {
@@ -272,21 +271,6 @@ export class AuthService {
             message
         );
         return throwError(() => error);
-    }
-
-    private async checkExistingToken(): Promise<void> {
-        if (this.isAuthenticated()) {
-            try {
-                const token = this.getToken()!;
-                this.getUserInfo(token).subscribe();
-            } catch (error) {
-                this.toastService.showWarning(
-                    'Sessão Expirada',
-                    'Sua sessão expirou. Faça login novamente.'
-                );
-                this.logout();
-            }
-        }
     }
 
 }

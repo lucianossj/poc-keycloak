@@ -45,9 +45,4 @@ public class AuthorizationController {
         return ResponseEntity.ok(authorizationService.logout(idToken));
     }
 
-    @GetMapping("/user-info")
-    public ResponseEntity<?> userInfo(@RequestHeader("Authorization") String bearerToken) {
-        return ResponseEntity.ok(authorizationService.getUserInfo(bearerToken));
-    }
-
 }

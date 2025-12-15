@@ -64,10 +64,6 @@ public class AuthorizationService {
         return keycloakIntegration.logout(idToken);
     }
 
-    public Map<String, Object> getUserInfo(String bearerToken) {
-        return keycloakIntegration.getUserInfo(bearerToken);
-    }
-    
     public Map<String, Object> login(LoginRequestDTO loginRequest) {
         String username = getUsernameForLogin(loginRequest.getEmail());
         String tokenUrl = keycloakProperties.getTokenEndpoint();
