@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, map, Observable, switchMap, throwError } from 'rxjs';
+import { catchError, map, Observable, switchMap, tap, throwError } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 
 export interface User {
@@ -69,6 +69,25 @@ export class AuthService {
         }
     }
 
+    public loginWithPassword(email: string, password: string): Observable<any> {
+        this.validateEmailAndPassword(email, password);
+        const loginData = this.buildLoginData(email, password);
+
+        return this.http.post('http://localhost:8081/auth/login', loginData).pipe(
+            tap((response: any) => {
+                this.setDataOnStorageAndReturn(response);
+                this.toastService.showSuccess('Sucesso', 'Login realizado com sucesso!');
+                this.validateFirstLoginAndNavigate(response);
+            }),
+            catchError((error) => {
+                console.error('Erro no login:', error);
+                const errorMessage = error.error?.message || error.error || 'Erro ao realizar login';
+                this.toastService.showError('Erro', errorMessage);
+                return throwError(() => error);
+            })
+        );
+    }
+
     public logout(): void {
         const idToken = localStorage.getItem('id_token');
         const accessToken = localStorage.getItem('access_token');
@@ -97,21 +116,7 @@ export class AuthService {
             this.handleLogoutSuccess(`/login`);
         }
     }
-
-    private handleLogoutSuccess(logoutUrl?: string): void {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('id_token');
-        localStorage.removeItem('user_info');
-        localStorage.removeItem('is_first_login');
-
-        if (logoutUrl) {
-            window.location.href = logoutUrl;
-        } else {
-            this.router.navigate(['/login']);
-        }
-    }
-
+    
     public isAuthenticated(): boolean {
         const token = localStorage.getItem('access_token');
         if (!token) return false;
@@ -127,6 +132,60 @@ export class AuthService {
 
     public getToken(): string | null {
         return localStorage.getItem('access_token');
+    }
+
+    public getStoredUserInfo(): any {
+        const userInfoStr = localStorage.getItem('user_info');
+        return userInfoStr ? JSON.parse(userInfoStr) : null;
+    }
+
+    public clearFirstLoginFlag(): void {
+        localStorage.removeItem('is_first_login');
+    }
+
+    private handleLogoutSuccess(logoutUrl?: string): void {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('id_token');
+        localStorage.removeItem('user_info');
+        localStorage.removeItem('is_first_login');
+
+        if (logoutUrl) {
+            window.location.href = logoutUrl;
+        } else {
+            this.router.navigate(['/login']);
+        }
+    }
+
+    private validateEmailAndPassword(email: string, password: string): void {
+        if (!email || !password) {
+            this.toastService.showError('Erro', 'Preencha e-mail e senha');
+            return;
+        }
+    }
+    
+    private buildLoginData(email: string, password: string): any {
+        return {
+            email: email,
+            password: password
+        };
+    }
+
+    private setDataOnStorageAndReturn(response: any): void {
+        localStorage.setItem('access_token', response.access_token);
+        localStorage.setItem('refresh_token', response.refresh_token);
+        
+        if (response.id_token) {
+            localStorage.setItem('id_token', response.id_token);
+        }
+    }
+
+    private validateFirstLoginAndNavigate(response: any): void {
+        if (response.is_first_login) {
+            this.router.navigate(['/complete-profile']);
+        } else {
+            this.router.navigate(['/home']);
+        }
     }
 
     private exchangeCodeForTokens(code: string): Observable<any> {
@@ -201,15 +260,6 @@ export class AuthService {
                 this.logout();
             }
         }
-    }
-
-    public getStoredUserInfo(): any {
-        const userInfoStr = localStorage.getItem('user_info');
-        return userInfoStr ? JSON.parse(userInfoStr) : null;
-    }
-
-    public clearFirstLoginFlag(): void {
-        localStorage.removeItem('is_first_login');
     }
 
 }

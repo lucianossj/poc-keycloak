@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CompleteProfileService } from './service/complete-profile.service';
 import { ToastService } from '../shared/services/toast.service';
-import { AuthService } from '../login/service/login.service';
+import { AuthService } from '../login/service/auth.service';
 
 @Component({
   selector: 'app-complete-profile',

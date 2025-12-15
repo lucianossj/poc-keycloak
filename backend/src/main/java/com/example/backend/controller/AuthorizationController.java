@@ -23,6 +23,11 @@ public class AuthorizationController {
         return ResponseEntity.ok(authorizationService.getUrl());
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
+        return ResponseEntity.ok(authorizationService.login(loginRequest));
+    }
+
     @PostMapping("/token")
     public ResponseEntity<?> exchangeCodeForToken(@RequestBody Map<String, String> body) {
         String code = body.get("code");
@@ -39,12 +44,7 @@ public class AuthorizationController {
     public ResponseEntity<?> userInfo(@RequestHeader("Authorization") String bearerToken) {
         return ResponseEntity.ok(authorizationService.getUserInfo(bearerToken));
     }
-    
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
-        return ResponseEntity.ok(authorizationService.login(loginRequest));
-    }
-    
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequestDTO registerRequest) {
         return ResponseEntity.ok(authorizationService.register(registerRequest));

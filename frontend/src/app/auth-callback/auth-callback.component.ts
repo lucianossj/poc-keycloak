@@ -1,7 +1,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { AuthService } from '../login/service/login.service';
+import { AuthService } from '../login/service/auth.service';
 import { CommonModule } from '@angular/common';
 import { ToastService } from '../shared/services/toast.service';
 

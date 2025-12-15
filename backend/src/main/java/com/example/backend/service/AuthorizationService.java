@@ -132,103 +132,16 @@ public class AuthorizationService {
     }
     
     public Map<String, Object> login(LoginRequestDTO loginRequest) {
-        log.info("Login com senha - Email/CPF: {}, Password length: {}", 
-                loginRequest.getEmail(), 
-                loginRequest.getPassword() != null ? loginRequest.getPassword().length() : 0);
-        
-        // Determinar se é email ou CPF
-        String username = loginRequest.getEmail();
-        
-        // Se não é um CPF (só números), buscar o CPF pelo email no MongoDB
-        if (!username.matches("^\\d+$")) {
-            try {
-                Customer customer = customerRepository.findByEmail(username)
-                    .orElse(null);
-                
-                if (customer != null && customer.getDocument() != null) {
-                    username = customer.getDocument(); // Usar CPF como username
-                    log.info("📧 Email fornecido. Username Keycloak será: {} (CPF)", username);
-                } else {
-                    log.info("📧 Email fornecido mas CPF não encontrado. Tentando login com email: {}", username);
-                }
-            } catch (Exception e) {
-                log.warn("⚠️ Erro ao buscar CPF por email. Tentando login com email: {}", e.getMessage());
-            }
-        } else {
-            log.info("🆔 CPF fornecido diretamente: {}", username);
-        }
-        
+        String username = getUsernameForLogin(loginRequest.getEmail());
         String tokenUrl = keycloakProperties.getTokenEndpoint();
-        
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type", "password");
-        body.add("client_id", keycloakProperties.getClientId());
-        body.add("scope", "openid email profile");  // Add openid scope to get id_token
-        
-        // Only add client_secret if it's a confidential client
-        if (keycloakProperties.hasClientSecret()) {
-            body.add("client_secret", keycloakProperties.getClientSecret());
-        }
-        
-        body.add("username", username);  // Usar CPF como username
-        body.add("password", loginRequest.getPassword());
-        
-        log.info("📤 Enviando requisição para: {}", tokenUrl);
-        log.info("📤 Body: grant_type=password, client_id={}, username={}", 
-                keycloakProperties.getClientId(), username);
-        
+        MultiValueMap<String, String> body = buildLoginRequestBody(username, loginRequest.getPassword());
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
-            Map<String, Object> tokenResponse = response.getBody();
-            
-            log.info("📥 Resposta do Keycloak: {}", tokenResponse != null ? tokenResponse.keySet() : "null");
-            log.info("📥 id_token presente? {}", tokenResponse != null && tokenResponse.containsKey("id_token"));
-            
-            String accessToken = (String) tokenResponse.get("access_token");
-            
-            // Decode JWT to get user info without calling userInfo endpoint
-            String[] jwtParts = accessToken.split("\\.");
-            if (jwtParts.length == 3) {
-                String payload = new String(java.util.Base64.getUrlDecoder().decode(jwtParts[1]));
-                Map<String, Object> claims = new com.fasterxml.jackson.databind.ObjectMapper().readValue(payload, Map.class);
-                
-                String keycloakUserId = (String) claims.get("sub");
-                String email = (String) claims.get("email");
-                String preferredUsername = (String) claims.get("preferred_username");
-                String name = (String) claims.get("name");
-                
-                boolean isFirstLogin = shouldShowCompleteProfile(keycloakUserId);
-                
-                Map<String, Object> userInfo = new HashMap<>();
-                userInfo.put("sub", keycloakUserId);
-                userInfo.put("email", email);
-                userInfo.put("preferred_username", preferredUsername);
-                userInfo.put("name", name);
-                
-                Map<String, Object> result = new HashMap<>(tokenResponse);
-                result.put("user_info", userInfo);
-                result.put("is_first_login", isFirstLogin);
-                
-                log.info("📤 Chaves na resposta final: {}", result.keySet());
-                log.info("📤 id_token na resposta final? {}", result.containsKey("id_token"));
-                
-                log.info("Login com senha realizado com sucesso para: {}", loginRequest.getEmail());
-                return result;
-            } else {
-                throw new RuntimeException("Token JWT inválido");
-            }
-            
-        } catch (Exception e) {
-            log.error("Erro ao fazer login com senha: {}", e.getMessage());
-            throw new RuntimeException("Credenciais inválidas", e);
-        }
+
+        return decodeJwtOnLogin(tokenUrl, request, loginRequest);
     }
-    
+
     public Map<String, Object> register(RegisterRequestDTO registerRequest) {
         log.info("Registrando novo usuário: {}", registerRequest.getEmail());
         
@@ -298,6 +211,78 @@ public class AuthorizationService {
         } catch (Exception e) {
             log.error("Erro ao registrar usuário: {}", e.getMessage(), e);
             throw new RuntimeException("Falha ao criar usuário: " + e.getMessage(), e);
+        }
+    }
+
+    private String getUsernameForLogin(String email) {
+        if (!email.matches("^\\d+$")) {
+            return customerRepository.findByEmail(email)
+                    .map(Customer::getDocument)
+                    .filter(doc -> doc != null && !doc.isBlank())
+                    .orElse(email);
+        }
+        return email;
+    }
+
+    private MultiValueMap<String, String> buildLoginRequestBody(String username, String password) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "password");
+        body.add("client_id", keycloakProperties.getClientId());
+        body.add("scope", "openid email profile");
+
+        if (keycloakProperties.hasClientSecret()) {
+            body.add("client_secret", keycloakProperties.getClientSecret());
+        }
+
+        body.add("username", username);
+        body.add("password", password);
+
+        return body;
+    }
+
+    private Map<String, Object> decodeJwtOnLogin(
+            String tokenUrl, HttpEntity<MultiValueMap<String, String>> request, LoginRequestDTO loginRequest
+    ) {
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+            Map<String, Object> tokenResponse = response.getBody();
+
+            String accessToken = (String) tokenResponse.get("access_token");
+
+            String[] jwtParts = accessToken.split("\\.");
+            if (jwtParts.length == 3) {
+                String payload = new String(java.util.Base64.getUrlDecoder().decode(jwtParts[1]));
+                Map<String, Object> claims = new com.fasterxml.jackson.databind.ObjectMapper().readValue(payload, Map.class);
+
+                String keycloakUserId = (String) claims.get("sub");
+                String email = (String) claims.get("email");
+                String preferredUsername = (String) claims.get("preferred_username");
+                String name = (String) claims.get("name");
+
+                boolean isFirstLogin = shouldShowCompleteProfile(keycloakUserId);
+
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("sub", keycloakUserId);
+                userInfo.put("email", email);
+                userInfo.put("preferred_username", preferredUsername);
+                userInfo.put("name", name);
+
+                Map<String, Object> result = new HashMap<>(tokenResponse);
+                result.put("user_info", userInfo);
+                result.put("is_first_login", isFirstLogin);
+
+                log.info("📤 Chaves na resposta final: {}", result.keySet());
+                log.info("📤 id_token na resposta final? {}", result.containsKey("id_token"));
+
+                log.info("Login com senha realizado com sucesso para: {}", loginRequest.getEmail());
+                return result;
+            } else {
+                throw new RuntimeException("Token JWT inválido");
+            }
+
+        } catch (Exception e) {
+            log.error("Erro ao fazer login com senha: {}", e.getMessage());
+            throw new RuntimeException("Credenciais inválidas", e);
         }
     }
 
