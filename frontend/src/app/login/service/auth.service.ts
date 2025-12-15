@@ -28,6 +28,28 @@ export class AuthService {
         this.checkExistingToken();
     }
 
+    public registerUser(registerData: any): Observable<any> {
+        try {
+            this.validateRegisterData(registerData);
+
+            return this.http.post('http://localhost:8081/auth/register', registerData).pipe(
+                tap((response: any) => {
+                    this.setDataOnStorage(response);
+                    this.toastService.showSuccess('Sucesso', 'Cadastro realizado com sucesso!');
+                    this.validateFirstLoginAndNavigate(response);
+                }),
+                catchError((error) => {
+                    console.error('Erro no cadastro:', error);
+                    const errorMessage = error.error?.message || error.error || 'Erro ao realizar cadastro';
+                    this.toastService.showError('Erro', errorMessage);
+                    return throwError(() => error);
+                }));
+        } catch (error) {
+            return throwError(() => error);
+        }
+        
+    }
+
     public getGoogleAuthUrl(): void {
         this.http.get<{ authUrl: string }>(`${this.backendUrl}/auth/url`)
             .subscribe({
@@ -75,7 +97,7 @@ export class AuthService {
 
         return this.http.post('http://localhost:8081/auth/login', loginData).pipe(
             tap((response: any) => {
-                this.setDataOnStorageAndReturn(response);
+                this.setDataOnStorage(response);
                 this.toastService.showSuccess('Sucesso', 'Login realizado com sucesso!');
                 this.validateFirstLoginAndNavigate(response);
             }),
@@ -143,6 +165,24 @@ export class AuthService {
         localStorage.removeItem('is_first_login');
     }
 
+    private validateRegisterData(registerData: any): void {
+        if (!registerData.name || !registerData.email || !registerData.document || !registerData.birthDate || !registerData.password) {
+        this.toastService.showError('Erro', 'Preencha todos os campos');
+        throw new Error('Dados incompletos');
+        }
+
+        if (registerData.password !== registerData.confirmPassword) {
+            console.log('Senhas não coincidem', registerData.password, registerData.confirmPassword);
+        this.toastService.showError('Erro', 'As senhas não coincidem');
+        throw new Error('Senhas não coincidem');
+        }
+
+        if (registerData.password.length < 6) {
+        this.toastService.showError('Erro', 'A senha deve ter no mínimo 6 caracteres');
+        throw new Error('Senha muito curta');
+        }
+    }
+
     private handleLogoutSuccess(logoutUrl?: string): void {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -171,7 +211,7 @@ export class AuthService {
         };
     }
 
-    private setDataOnStorageAndReturn(response: any): void {
+    private setDataOnStorage(response: any): void {
         localStorage.setItem('access_token', response.access_token);
         localStorage.setItem('refresh_token', response.refresh_token);
         

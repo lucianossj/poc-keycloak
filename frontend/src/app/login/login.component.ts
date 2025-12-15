@@ -26,6 +26,7 @@ export class LoginComponent {
   }
 
   public loginWithPassword(): void {
+    this.loading = true;
     this.authService.loginWithPassword(this.email, this.password).subscribe({
       next: () => {
         this.loading = false;
